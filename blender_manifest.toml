@@ -1,0 +1,18 @@
+schema_version = "1.0.0"
+
+id = "on_screen_numpad"
+version = "1.1.0"
+name = "On-Screen Numpad"
+tagline = "No need to leave the mouse to enter numbers!"
+maintainer = "Pluglug"
+type = "add-on"
+
+website = "https://github.com/Pluglug/on-screen-numpad"
+tags = ["User Interface"]
+
+blender_version_min = "4.2.0"
+blender_version_max = "4.6.0"
+
+license = [
+  "SPDX:GPL-2.0-or-later",
+]
