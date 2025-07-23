@@ -4,6 +4,7 @@ from bpy.types import AddonPreferences
 
 from .keymaps import draw_keymap
 from .utils.ui_utils import ic
+from .utils.logging import get_logger
 
 
 class OnScreenNumpadPreferences(AddonPreferences):
@@ -79,6 +80,14 @@ class OnScreenNumpadPreferences(AddonPreferences):
         max=100,
     )
 
+    # Debug settings
+    debug_mode: BoolProperty(
+        name="Debug Mode",
+        description="Enable debug logging for troubleshooting",
+        default=False,
+        update=lambda self, context: self.update_debug_mode(context),
+    )
+
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
@@ -105,6 +114,11 @@ class OnScreenNumpadPreferences(AddonPreferences):
         keymap_box = layout.box()
         keymap_box.label(text="Hotkeys", icon=ic("MOUSE_MMB"))
         draw_keymap(self, context, keymap_box)
+
+        # Debug section
+        debug_box = layout.box()
+        debug_box.label(text="Debug", icon=ic("SCRIPT"))
+        debug_box.prop(self, "debug_mode")
 
     def get_effective_history_size(self) -> int:
         """Get effective history size"""
@@ -134,3 +148,13 @@ class OnScreenNumpadPreferences(AddonPreferences):
             return str(int(round(value)))
         else:
             return f"{value:.{self.decimal_places}f}"
+
+    def update_debug_mode(self, context):
+        """Update log level when debug mode is toggled"""
+        log = get_logger()
+        if self.debug_mode:
+            log.set_level("debug")
+            log.info("Debug mode enabled")
+        else:
+            log.set_level("info")
+            log.info("Debug mode disabled")

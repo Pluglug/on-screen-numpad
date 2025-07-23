@@ -36,6 +36,22 @@ def register():
     register_menu()
     register_keymaps()
 
+    # Set initial log level based on debug mode preference
+    from .addon import get_prefs
+    from .utils.logging import get_logger
+
+    try:
+        prefs = get_prefs()
+        log = get_logger()
+        if prefs.debug_mode:
+            log.set_level("debug")
+        else:
+            log.set_level("info")
+    except:
+        # If preferences not available yet, default to info level
+        log = get_logger()
+        log.set_level("info")
+
 
 def unregister():
     unregister_keymaps()

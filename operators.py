@@ -43,6 +43,7 @@ class WM_OT_numeric_input(Operator):
 
     def invoke(self, context, event):
         """Display calculator dialog"""
+        log.debug("WM_OT_numeric_input invoked")
         calculator = CalculatorState.get_instance()
 
         # Set property information
@@ -418,6 +419,7 @@ class WM_OT_numeric_input(Operator):
 
     def execute(self, context):
         """Execute calculation and apply to property"""
+        log.debug("WM_OT_numeric_input_key executed")
         calculator = CalculatorState.get_instance()
 
         if not calculator.current_property:
