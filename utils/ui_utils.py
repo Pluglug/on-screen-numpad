@@ -182,10 +182,12 @@ def ui_multiline_text(
         elif text_color == "ERROR":
             row.alert = True
 
-        # 最初の行のみアイコンを表示、それ以降は None
-        current_icon = (
-            ic(icon) if (i == 0 and icon and ic(icon) != "BLENDER") else "BLANK1"
-        )
+        # 最初の行のみアイコンを表示、それ以降は "BLANK1"
+        if i == 0 and icon:
+            converted_icon = ic(icon)
+            current_icon = converted_icon if converted_icon != "BLENDER" else "BLANK1"
+        else:
+            current_icon = "BLANK1"
 
         # テキストを表示
         if text_color == "SECONDARY":
