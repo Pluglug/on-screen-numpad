@@ -8,6 +8,8 @@
 
 An on-screen numpad addon for Blender's numeric property input. Simply press a hotkey while your mouse cursor is over a property field to display a calculator-enabled numeric input dialog.
 
+![osn_demo](https://github.com/user-attachments/assets/145214a0-2b3a-41ac-ad94-45d5dd167078)
+
 ## Features
 
 **🖱️ Mouse-Optimized**
@@ -42,6 +44,8 @@ tau/4           → 1.571  (direct radian value)
 **📝 Convenient Features**
 - History function, use current values, automatic property limit enforcement
 - Property path display, keypad layout switching
+
+<img width="487" height="1420" alt="full ui" src="https://github.com/user-attachments/assets/387e6e15-324f-43e8-a7c9-5de258e997f0" />
 
 ## Settings
 
