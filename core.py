@@ -65,70 +65,34 @@ class PropertyInfo:
             return "Unknown"
 
         try:
-            # Special handling for UI context objects
+            # Generate base path based on object type
             if hasattr(self.id_owner, "bl_rna"):
                 class_name = self.id_owner.bl_rna.identifier
 
-                # Screen object
+                # Special handling for UI context objects
                 if class_name == "Screen":
                     base_path = "bpy.context.screen"
-                # Window object
                 elif class_name == "Window":
                     base_path = "bpy.context.window"
-                # Scene object
                 elif class_name == "Scene":
                     base_path = f'bpy.data.scenes["{self.id_owner.name}"]'
-                # Object
                 elif class_name == "Object":
                     base_path = f'bpy.data.objects["{self.id_owner.name}"]'
-                # Other data blocks
                 else:
-                    # Default processing
+                    # Default processing for other data blocks
                     id_path = f'bpy.data.{self.id_owner.__class__.__name__.lower()}s["{self.id_owner.name}"]'
                     base_path = id_path
             else:
                 # Fallback when bl_rna is not available
                 base_path = str(self.id_owner)
 
-            # For nested paths, sub_path is empty so add property name directly
+            # Build full path
             if self.sub_path:
                 full_path = f"{base_path}{self.sub_path}.{self.prop.identifier}"
             else:
-                # For UI context properties, simplify to show property name only
                 full_path = f"{base_path}.{self.prop.identifier}"
 
-            # Special handling for UI context objects (duplicate code - needs refactoring)
-            if hasattr(self.id_owner, "bl_rna"):
-                class_name = self.id_owner.bl_rna.identifier
-
-                # Screen object
-                if class_name == "Screen":
-                    base_path = "bpy.context.screen"
-                # Window object
-                elif class_name == "Window":
-                    base_path = "bpy.context.window"
-                # Scene object
-                elif class_name == "Scene":
-                    base_path = f'bpy.data.scenes["{self.id_owner.name}"]'
-                # Object
-                elif class_name == "Object":
-                    base_path = f'bpy.data.objects["{self.id_owner.name}"]'
-                # Other data blocks
-                else:
-                    # Default processing
-                    id_path = f'bpy.data.{self.id_owner.__class__.__name__.lower()}s["{self.id_owner.name}"]'
-                    base_path = id_path
-            else:
-                # Fallback when bl_rna is not available
-                base_path = str(self.id_owner)
-
-            # For nested paths, sub_path is empty so add property name directly
-            if self.sub_path:
-                full_path = f"{base_path}{self.sub_path}.{self.prop.identifier}"
-            else:
-                # For UI context properties, simplify to show property name only
-                full_path = f"{base_path}.{self.prop.identifier}"
-
+            # Add array index if applicable
             if self.prop_index != -1:
                 full_path += f"[{self.prop_index}]"
             return full_path
