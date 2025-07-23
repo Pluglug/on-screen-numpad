@@ -4,7 +4,7 @@
 
 ![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange)
 ![Version](https://img.shields.io/badge/Version-1.1.0-blue)
-![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green)
+![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
 An on-screen numpad addon for Blender's numeric property input. Simply press a hotkey while your mouse cursor is over a property field to display a calculator-enabled numeric input dialog.
 
