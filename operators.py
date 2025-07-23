@@ -223,27 +223,70 @@ class WM_OT_numeric_input(Operator):
             func_col = body.column(align=True)
             func_col.scale_y = 0.9
 
+            # 定数
+            const_row = func_col.row(align=True)
+            for func, display in [
+                ("pi", "π"),
+                ("e", "e"),
+                ("tau", "τ"),
+            ]:
+                op = const_row.operator("wm.numeric_input_key", text=display)
+                op.operation = "FUNCTION"
+                op.value = func
+
             # 三角関数
-            trig_row = func_col.row(align=True)
+            trig_row1 = func_col.row(align=True)
             for func, display in [
                 ("sin", "sin"),
                 ("cos", "cos"),
                 ("tan", "tan"),
-                ("pi", "π"),
+                ("atan2", "atan2"),
             ]:
-                op = trig_row.operator("wm.numeric_input_key", text=display)
+                op = trig_row1.operator("wm.numeric_input_key", text=display)
                 op.operation = "FUNCTION"
                 op.value = func
 
-            # その他の関数
-            other_row = func_col.row(align=True)
+            # 逆三角関数
+            trig_row2 = func_col.row(align=True)
+            for func, display in [
+                ("asin", "asin"),
+                ("acos", "acos"),
+                ("atan", "atan"),
+            ]:
+                op = trig_row2.operator("wm.numeric_input_key", text=display)
+                op.operation = "FUNCTION"
+                op.value = func
+
+            # 角度変換
+            angle_row = func_col.row(align=True)
+            for func, display in [
+                ("radians", "rad"),
+                ("degrees", "deg"),
+            ]:
+                op = angle_row.operator("wm.numeric_input_key", text=display)
+                op.operation = "FUNCTION"
+                op.value = func
+
+            # 基本関数
+            basic_row1 = func_col.row(align=True)
             for func, display in [
                 ("sqrt", "√"),
-                ("log", "log"),
-                ("exp", "exp"),
                 ("abs", "abs"),
+                ("min", "min"),
+                ("max", "max"),
             ]:
-                op = other_row.operator("wm.numeric_input_key", text=display)
+                op = basic_row1.operator("wm.numeric_input_key", text=display)
+                op.operation = "FUNCTION"
+                op.value = func
+
+            # 対数・指数関数
+            log_row = func_col.row(align=True)
+            for func, display in [
+                ("log", "ln"),
+                ("log10", "log"),
+                ("exp", "exp"),
+            ]:
+                op = log_row.operator("wm.numeric_input_key", text=display)
                 op.operation = "FUNCTION"
                 op.value = func
 
@@ -437,7 +480,7 @@ class WM_OT_numeric_input_key(Operator):
             and (
                 self.value.isdigit()
                 or self.value in [".", "("]
-                or self.operation == "FUNCTION"
+                or (self.operation == "FUNCTION" and self.value in ["pi", "e", "tau"])
             )
         )
 
@@ -468,7 +511,13 @@ class WM_OT_numeric_input_key(Operator):
             if self.value in ["pi", "e", "tau"]:
                 popup.expr += self.value
             else:
-                popup.expr += f"{self.value}("
+                # 現在値が設定されている場合は括弧内に現在値を自動挿入
+                if popup.initial_value_set and popup.expr.strip():
+                    current_expr = popup.expr
+                    popup.expr = f"{self.value}({current_expr})"
+                    popup.initial_value_set = False
+                else:
+                    popup.expr += f"{self.value}("
         elif self.operation == "HISTORY":
             popup.expr = self.value
             popup.initial_value_set = False
