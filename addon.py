@@ -9,6 +9,8 @@ import bpy
 if TYPE_CHECKING:
     from .preferences import OnScreenNumpadPreferences
 
+from .utils.logging import get_logger
+
 ADDON_PATH = os.path.dirname(os.path.abspath(__file__))
 ADDON_ID = os.path.basename(ADDON_PATH)
 ADDON_PREFIX = "".join([s[0] for s in re.split(r"[_-]", ADDON_ID)]).upper()
@@ -70,3 +72,22 @@ def get_prefs(context: bpy.types.Context = bpy.context) -> OnScreenNumpadPrefere
             return addon.preferences
 
     raise KeyError(f"Addon/Extension '{ADDON_ID}' not found in user preferences.")
+
+
+def init_addon():
+    """Initialize addon settings after registration"""
+
+    try:
+        prefs = get_prefs()
+        log = get_logger()
+        if prefs.debug_mode:
+            log.set_level("debug")
+            log.info("On-Screen Numpad initialized with debug mode enabled")
+        else:
+            log.set_level("info")
+            log.info("On-Screen Numpad initialized")
+    except:
+        # If preferences not available yet, default to info level
+        log = get_logger()
+        log.set_level("info")
+        log.info("On-Screen Numpad initialized with default settings")
