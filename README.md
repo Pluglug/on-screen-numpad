@@ -69,9 +69,9 @@ tau/4           → 1.571  (direct radian value)
 
 ## License
 
-[GPL-2.0-or-later](LICENSE)
+[GPL-3.0-or-later](LICENSE)
 
-This project is licensed under the GNU General Public License v2.0 or later.
+This project is licensed under the GNU General Public License v3.0 or later.
 
 ## Contributing
 
