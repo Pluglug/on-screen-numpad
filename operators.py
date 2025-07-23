@@ -1,3 +1,4 @@
+# pyright: reportInvalidTypeForm=false
 import bpy
 from bpy.types import Operator
 from bpy.props import StringProperty, BoolProperty
@@ -11,45 +12,45 @@ log = get_logger(__name__)
 
 
 class WM_OT_numeric_input(Operator):
-    """数値プロパティ用の電卓インターフェース"""
+    """Calculator interface for numeric properties"""
 
     bl_idname = "wm.numeric_input"
     bl_label = "On-Screen Numpad"
     bl_description = "Numpad interface for numeric properties"
 
-    expr: StringProperty(default="")  # type: ignore
-    initial_value_set: BoolProperty(default=False)  # type: ignore
+    expr: StringProperty(default="")
+    initial_value_set: BoolProperty(default=False)
 
     @classmethod
     def poll(cls, context):
-        """オペレータが実行可能かチェック"""
-        # 既に電卓が開いている場合は許可
+        """Check if operator can be executed"""
+        # Allow if calculator is already open
         calculator = CalculatorState.get_instance()
         if calculator.current_property:
             return True
 
-        # 通常のプロパティコンテキストをチェック
+        # Check normal property context
         ptr = getattr(context, "button_pointer", None)
         prop = getattr(context, "button_prop", None)
         if ptr and prop and prop.type in {"INT", "FLOAT"}:
             return True
 
-        # ホットキー呼び出し時: copy_data_path_buttonのpollを使用
+        # For hotkey invocation: use copy_data_path_button poll
         try:
             return bpy.ops.ui.copy_data_path_button.poll()
         except Exception:
             return False
 
     def invoke(self, context, event):
-        """電卓ダイアログを表示"""
+        """Display calculator dialog"""
         calculator = CalculatorState.get_instance()
 
-        # プロパティ情報を設定
+        # Set property information
         if not calculator.detect_property_from_context(context):
             self.report({"ERROR"}, "Failed to get property information")
             return {"CANCELLED"}
 
-        # プロパティ型をチェック（ホットキー呼び出し時の型検証）
+        # Check property type (type validation for hotkey invocation)
         if (
             not calculator.current_property
             or calculator.current_property.prop.type not in {"INT", "FLOAT"}
@@ -60,7 +61,7 @@ class WM_OT_numeric_input(Operator):
             )
             return {"CANCELLED"}
 
-        # Vector型プロパティ全体の場合はエラー
+        # Error for vector properties as a whole
         current_value = calculator.current_property.get_current_value()
         if current_value is None:
             self.report(
@@ -69,13 +70,13 @@ class WM_OT_numeric_input(Operator):
             )
             return {"CANCELLED"}
 
-        # 電卓の参照を設定
+        # Set calculator reference
         calculator.set_popup(self)
 
-        # プリファレンスを取得
+        # Get preferences
         prefs = get_prefs()
 
-        # 現在値を表示するかチェック
+        # Check if current value should be displayed
         if prefs and prefs.should_use_current_value():
             current_value = calculator.current_property.get_current_value()
             if (
@@ -83,18 +84,18 @@ class WM_OT_numeric_input(Operator):
                 and calculator.current_property.is_angle_property()
                 and prefs.should_convert_angles()
             ):
-                # ラジアン→度変換
+                # Convert radians to degrees
                 import math
 
                 current_value = math.degrees(current_value)
 
             if current_value is not None:
-                # プリファレンスの小数点以下桁数でフォーマット
+                # Format with decimal places from preferences
                 if prefs:
                     self.expr = prefs.format_result(current_value)
                 else:
                     self.expr = str(current_value)
-                # 初期値が設定されたことを記録
+                # Record that initial value was set
                 self.initial_value_set = True
             else:
                 self.expr = ""
@@ -107,12 +108,12 @@ class WM_OT_numeric_input(Operator):
             f"Numpad invoked for: {calculator.current_property.get_display_path()}"
         )
 
-        # ダイアログ幅をプリファレンスから取得
+        # Get dialog width from preferences
         dialog_width = prefs.dialog_width if prefs else 300
         return context.window_manager.invoke_props_dialog(self, width=dialog_width)
 
     def draw(self, context):
-        """Numpad UIを描画"""
+        """Draw numpad UI"""
         calculator = CalculatorState.get_instance()
         if not calculator.current_property:
             return
@@ -122,24 +123,24 @@ class WM_OT_numeric_input(Operator):
         layout.use_property_split = False
         layout.use_property_decorate = False
 
-        # === プロパティ情報パネル ===
+        # === Property Information Panel ===
         if calculator.current_property and prefs and prefs.show_property_path:
-            # プロパティ名をタイトルに、パスを本文に表示
+            # Show property name as title, path as body
             prop_name = calculator.current_property.prop.identifier
             prop_path = calculator.current_property.get_display_path()
 
-            # # ダイアログ幅に基づいて折り返し幅を計算
+            # # Calculate wrap width based on dialog width
             # dialog_width = prefs.dialog_width if prefs else 300
-            # # 大体の文字数を計算（ピクセル幅 / 8px per character）
+            # # Estimate character count (pixel width / 8px per character)
             # wrap_width = max(30, dialog_width // 12)
 
-            # プロパティ詳細情報を追加
+            # Add property detail information
             additional_info = []
             if (
                 prefs.should_respect_limits()
                 or calculator.current_property.get_current_value() is not None
             ):
-                # 現在値
+                # Current value
                 current_value = calculator.current_property.get_current_value()
                 if current_value is not None:
                     current_str = (
@@ -149,7 +150,7 @@ class WM_OT_numeric_input(Operator):
                     )
                     additional_info.append(f"Current Value: {current_str}")
 
-                # プロパティ制限
+                # Property limits
                 if prefs.should_respect_limits():
                     hard_min, hard_max = (
                         calculator.current_property.get_property_limits()
@@ -159,12 +160,12 @@ class WM_OT_numeric_input(Operator):
                         max_str = str(hard_max) if hard_max is not None else "∞"
                         additional_info.append(f"Range: [{min_str} ~ {max_str}]")
 
-            # 表示テキストを組み立て
+            # Build display text
             display_text = prop_path
             if additional_info:
                 display_text += "\n" + "\n".join(additional_info)
 
-            # ui_text_blockを使用してプロパティ情報を表示
+            # Display property information using ui_text_block
             ui_text_block(
                 layout,
                 title=prop_name,
@@ -176,18 +177,18 @@ class WM_OT_numeric_input(Operator):
                 show_copy_button=True,
             )
 
-        # === 入力エリア ===
+        # === Input Area ===
         input_box = layout.box()
         input_col = input_box.column()
 
-        # 入力フィールド（大きめ）
+        # Input field (larger)
         expr_row = input_col.row(align=True)
         expr_row.scale_y = 1.4
         expr_row.prop(self, "expr", text="", icon=ic("CONSOLE"), placeholder="0")
         op = expr_row.operator("wm.numeric_input_key", text="", icon=ic("PANEL_CLOSE"))
         op.operation = "CLEAR"
 
-        # 角度変換の注意書き
+        # Angle conversion notice
         if (
             calculator.current_property
             and calculator.current_property.is_angle_property()
@@ -202,28 +203,28 @@ class WM_OT_numeric_input(Operator):
                 icon=ic("INFO"),
             )
 
-        # === 数値キーパッド ===
+        # === Numeric Keypad ===
         self._draw_numpad(input_box)
 
-        # === 関数パレット ===
+        # === Function Palette ===
         if prefs and prefs.show_functions:
             self._draw_function_buttons(layout)
 
-        # === 履歴パネル ===
+        # === History Panel ===
         if prefs and prefs.show_history and calculator.expression_history:
             self._draw_history_panel(layout, calculator.expression_history)
 
     def _draw_function_buttons(self, layout):
-        """関数ボタンを描画"""
+        """Draw function buttons"""
         header, body = layout.panel("calc_functions", default_closed=True)
         header.label(text="Math Functions", icon=ic("SCRIPTPLUGINS"))
 
         if body:
-            # 関数ボタンをカテゴリ分け
+            # Categorize function buttons
             func_col = body.column(align=True)
             func_col.scale_y = 0.9
 
-            # 定数
+            # Constants
             const_row = func_col.row(align=True)
             for func, display in [
                 ("pi", "π"),
@@ -234,7 +235,7 @@ class WM_OT_numeric_input(Operator):
                 op.operation = "FUNCTION"
                 op.value = func
 
-            # 三角関数
+            # Trigonometric functions
             trig_row1 = func_col.row(align=True)
             for func, display in [
                 ("sin", "sin"),
@@ -246,7 +247,7 @@ class WM_OT_numeric_input(Operator):
                 op.operation = "FUNCTION"
                 op.value = func
 
-            # 逆三角関数
+            # Inverse trigonometric functions
             trig_row2 = func_col.row(align=True)
             for func, display in [
                 ("asin", "asin"),
@@ -257,7 +258,7 @@ class WM_OT_numeric_input(Operator):
                 op.operation = "FUNCTION"
                 op.value = func
 
-            # 角度変換
+            # Angle conversion
             angle_row = func_col.row(align=True)
             for func, display in [
                 ("radians", "rad"),
@@ -267,7 +268,7 @@ class WM_OT_numeric_input(Operator):
                 op.operation = "FUNCTION"
                 op.value = func
 
-            # 基本関数
+            # Basic functions
             basic_row1 = func_col.row(align=True)
             for func, display in [
                 ("sqrt", "√"),
@@ -279,7 +280,7 @@ class WM_OT_numeric_input(Operator):
                 op.operation = "FUNCTION"
                 op.value = func
 
-            # 対数・指数関数
+            # Logarithmic and exponential functions
             log_row = func_col.row(align=True)
             for func, display in [
                 ("log", "ln"),
@@ -291,7 +292,7 @@ class WM_OT_numeric_input(Operator):
                 op.value = func
 
     def _draw_numpad(self, layout):
-        """テンキーレイアウトを描画"""
+        """Draw numpad layout"""
         BUTTON_SCALE_Y = 1.8
         BUTTON_SCALE_X = 0.5
         COMMON_SCALE_Y = 1.1
@@ -300,7 +301,7 @@ class WM_OT_numeric_input(Operator):
 
         num_box = layout.box()
 
-        # # クリアボタン（最上段）
+        # # Clear button (top row)
         # clear_row = num_box.row(align=True)
         # clear_row.scale_y = COMMON_SCALE_Y
         # clear_op = clear_row.operator(
@@ -308,26 +309,26 @@ class WM_OT_numeric_input(Operator):
         # )
         # clear_op.operation = "CLEAR"
 
-        # メインキーパッドレイアウト
+        # Main keypad layout
         main_row = num_box.row(align=False)
 
-        # 左側：数字キーパッド（3x3グリッド）
+        # Left side: number keypad (3x3 grid)
         numbers_col = main_row.column(align=True)
         numbers_col.scale_y = BUTTON_SCALE_Y
         numbers_col.scale_x = BUTTON_SCALE_X
 
-        # 電話風か電卓風かでレイアウトを切り替え
+        # Switch layout between phone and calculator style
         phone_layout = prefs.phone_keypad_layout if prefs else False
 
         if phone_layout:
-            # 電話風レイアウト（1-2-3が上）
+            # Phone layout (1-2-3 on top)
             number_rows = [
                 ["1", "2", "3"],
                 ["4", "5", "6"],
                 ["7", "8", "9"],
             ]
         else:
-            # 電卓風レイアウト（7-8-9が上）
+            # Calculator layout (7-8-9 on top)
             number_rows = [
                 ["7", "8", "9"],
                 ["4", "5", "6"],
@@ -341,10 +342,10 @@ class WM_OT_numeric_input(Operator):
                 op.operation = "INPUT"
                 op.value = num
 
-        # 最下段：0、ドット、バックスペース
+        # Bottom row: 0, dot, backspace
         bottom_row = numbers_col.row(align=True)
 
-        # 0とドットの順序を電話/電卓配列に応じて決定
+        # Determine order of 0 and dot based on phone/calculator layout
         keys = [".", "0"] if phone_layout else ["0", "."]
         for key in keys:
             op = bottom_row.operator("wm.numeric_input_key", text=key)
@@ -354,7 +355,7 @@ class WM_OT_numeric_input(Operator):
         back_op = bottom_row.operator("wm.numeric_input_key", text="⌫")
         back_op.operation = "BACKSPACE"
 
-        # 右側：四則演算（縦一列）
+        # Right side: arithmetic operations (vertical column)
         operators_col = main_row.column(align=True)
         operators_col.scale_y = BUTTON_SCALE_Y
         operators_col.scale_x = BUTTON_SCALE_X
@@ -371,11 +372,11 @@ class WM_OT_numeric_input(Operator):
             op.operation = "INPUT"
             op.value = value
 
-        # 特殊操作行
+        # Special operations row
         special_row = num_box.row(align=True)
         special_row.scale_y = COMMON_SCALE_Y
 
-        # 括弧と累乗、符号反転
+        # Parentheses, power, and sign toggle
         paren_open_op = special_row.operator("wm.numeric_input_key", text="(")
         paren_open_op.operation = "INPUT"
         paren_open_op.value = "("
@@ -392,12 +393,12 @@ class WM_OT_numeric_input(Operator):
         negate_op.operation = "NEGATE"
 
     def _draw_history_panel(self, layout, history):
-        """履歴パネルを描画"""
+        """Draw history panel"""
         header, body = layout.panel("calc_history", default_closed=True)
         header.label(text="History", icon=ic("TIME"))
 
         if body:
-            # 最新5件を表示
+            # Show recent 5 entries
             recent_history = history[-5:]
             if recent_history:
                 history_col = body.column(align=True)
@@ -416,7 +417,7 @@ class WM_OT_numeric_input(Operator):
                 empty_row.label(text="No history", icon=ic("INFO"))
 
     def execute(self, context):
-        """計算を実行してプロパティに適用"""
+        """Execute calculation and apply to property"""
         calculator = CalculatorState.get_instance()
 
         if not calculator.current_property:
@@ -428,13 +429,13 @@ class WM_OT_numeric_input(Operator):
             return {"CANCELLED"}
 
         try:
-            # 式の前処理（角度変換など）
+            # Preprocess expression (angle conversion, etc.)
             processed_expr = calculator.process_expression_for_property(self.expr)
 
-            # 数式を評価
+            # Evaluate expression
             result = calculator.evaluate_expression(processed_expr)
 
-            # プロパティに書き込み
+            # Write to property
             if calculator.write_value_to_property(result):
                 prefs = get_prefs()
                 result_str = prefs.format_result(result) if prefs else str(result)
@@ -455,17 +456,17 @@ class WM_OT_numeric_input(Operator):
 
 
 class WM_OT_numeric_input_key(Operator):
-    """Numpadキー入力オペレータ"""
+    """Numpad key input operator"""
 
     bl_idname = "wm.numeric_input_key"
     bl_label = "Numpad Key"
     bl_description = "Numpad key input"
 
-    operation: StringProperty()  # type: ignore
-    value: StringProperty()  # type: ignore
+    operation: StringProperty()
+    value: StringProperty()
 
     def execute(self, context):
-        """キー操作を実行"""
+        """Execute key operation"""
         calculator = CalculatorState.get_instance()
         popup = calculator.get_popup()
 
@@ -473,7 +474,7 @@ class WM_OT_numeric_input_key(Operator):
             self.report({"ERROR"}, "Numpad not running")
             return {"CANCELLED"}
 
-        # 初期値が表示されている状態での自動クリア判定
+        # Auto-clear detection when initial value is displayed
         should_auto_clear = (
             popup.initial_value_set
             and self.operation in ("INPUT", "FUNCTION")
@@ -491,27 +492,27 @@ class WM_OT_numeric_input_key(Operator):
 
         if self.operation == "INPUT":
             popup.expr += self.value
-            # 四則演算子が入力された場合は初期値フラグをクリア（計算継続モードに移行）
+            # Clear initial value flag when arithmetic operators are entered (switch to calculation mode)
             if self.value in ["+", "-", "*", "/", ")", "**", "%"]:
                 popup.initial_value_set = False
         elif self.operation == "BACKSPACE":
             popup.expr = popup.expr[:-1]
-            # バックスペースで編集開始した場合も初期値フラグをクリア
+            # Clear initial value flag when editing starts with backspace
             popup.initial_value_set = False
         elif self.operation == "CLEAR":
             popup.expr = ""
             popup.initial_value_set = False
         elif self.operation == "NEGATE":
             if popup.expr:
-                # 現在の式を括弧で囲んで符号反転
+                # Wrap current expression in parentheses and negate
                 popup.expr = f"-({popup.expr})"
             popup.initial_value_set = False
         elif self.operation == "FUNCTION":
-            # 関数名を挿入（引数用の括弧も追加）
+            # Insert function name (add parentheses for arguments)
             if self.value in ["pi", "e", "tau"]:
                 popup.expr += self.value
             else:
-                # 現在値が設定されている場合は括弧内に現在値を自動挿入
+                # Auto-insert current value in parentheses if current value is set
                 if popup.initial_value_set and popup.expr.strip():
                     current_expr = popup.expr
                     popup.expr = f"{self.value}({current_expr})"

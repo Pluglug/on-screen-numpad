@@ -10,7 +10,7 @@ class OnScreenNumpadPreferences(AddonPreferences):
 
     bl_idname = __package__
 
-    # UI表示オプション
+    # UI display options
     use_current_value: BoolProperty(
         name="Use Current Value",
         description="Use the current property value in the input field when opening numpad",
@@ -41,29 +41,6 @@ class OnScreenNumpadPreferences(AddonPreferences):
         default=False,
     )
 
-    # 計算オプション
-    respect_property_limits: BoolProperty(
-        name="Respect Property Limits",
-        description="Automatically clamp values to property min/max limits",
-        default=True,
-    )
-
-    auto_angle_conversion: BoolProperty(
-        name="Auto Angle Conversion",
-        description="Automatically convert degrees to radians for angle properties",
-        default=True,
-    )
-
-    # 履歴設定
-    history_size: IntProperty(
-        name="History Size",
-        description="Number of expressions to keep in history",
-        default=10,
-        min=1,
-        max=100,
-    )
-
-    # UI設定
     dialog_width: IntProperty(
         name="Dialog Width",
         description="Width of the numpad dialog",
@@ -78,6 +55,28 @@ class OnScreenNumpadPreferences(AddonPreferences):
         default=3,
         min=0,
         max=10,
+    )
+
+    # Calculation options
+    respect_property_limits: BoolProperty(
+        name="Respect Property Limits",
+        description="Automatically clamp values to property min/max limits",
+        default=True,
+    )
+
+    auto_angle_conversion: BoolProperty(
+        name="Auto Angle Conversion",
+        description="Automatically convert degrees to radians for angle properties",
+        default=True,
+    )
+
+    # History settings
+    history_size: IntProperty(
+        name="History Size",
+        description="Number of expressions to keep in history",
+        default=10,
+        min=1,
+        max=100,
     )
 
     def draw(self, context):
@@ -108,7 +107,7 @@ class OnScreenNumpadPreferences(AddonPreferences):
         draw_keymap(self, context, keymap_box)
 
     def get_effective_history_size(self) -> int:
-        """有効な履歴サイズを取得"""
+        """Get effective history size"""
         return max(5, min(100, self.history_size))
 
     def should_use_current_value(self) -> bool:
@@ -121,16 +120,16 @@ class OnScreenNumpadPreferences(AddonPreferences):
         return self.auto_angle_conversion
 
     def format_result(self, value) -> str:
-        """結果を設定された小数点以下桁数でフォーマット"""
-        # None値やVector型の場合は文字列として返す
+        """Format result with specified decimal places"""
+        # Return as string for None values or Vector types
         if value is None:
             return "N/A"
 
-        # Vector型やその他の非数値型の場合
+        # For other non-numeric types (Vector, etc.)
         if not isinstance(value, (int, float)):
             return str(value)
 
-        # 数値の場合は小数点以下桁数でフォーマット
+        # For numeric values, format with specified decimal places
         if self.decimal_places == 0:
             return str(int(round(value)))
         else:

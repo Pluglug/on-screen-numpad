@@ -14,21 +14,14 @@ ADDON_ID = os.path.basename(ADDON_PATH)
 ADDON_PREFIX = "".join([s[0] for s in re.split(r"[_-]", ADDON_ID)]).upper()
 ADDON_PREFIX_PY = ADDON_PREFIX.lower()
 
-# 検索対象名を正規化
 _TARGET_NAME_NORM = ADDON_ID.replace("-", "_")
 
 
 def _is_target_addon(key: str) -> bool:
-    """与えられたアドオンキーがこのアドオンを指すか判定する。
-
-    - `bl_ext.` プレフィックスの有無を無視
-    - ハイフン／アンダースコアの差異を無視
-    """
-    base = key.split(".")[-1]  # 末尾部分
+    base = key.split(".")[-1]
     return base.replace("-", "_") == _TARGET_NAME_NORM
 
 
-# キャッシュ: key=id(bpy.types.Preferences) -> OnScreenNumpadPreferences
 _PREFS_CACHE: Dict[int, "OnScreenNumpadPreferences"] = {}
 
 
@@ -76,5 +69,4 @@ def get_prefs(context: bpy.types.Context = bpy.context) -> OnScreenNumpadPrefere
             _PREFS_CACHE[cache_key] = addon.preferences
             return addon.preferences
 
-    # 見つからなければエラー
     raise KeyError(f"Addon/Extension '{ADDON_ID}' not found in user preferences.")
