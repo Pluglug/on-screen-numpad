@@ -10,8 +10,8 @@ from .utils.ui_utils import CopyTextToClipboardOperator
 bl_info = {
     "name": "On-Screen Numpad",
     "author": "Pluglug",
-    "version": (1, 0, 0),
-    "blender": (4, 5, 0),
+    "version": (1, 1, 0),
+    "blender": (4, 2, 0),
     "location": "Numeric Property Fields",
     "description": "No need to leave the mouse to enter numbers!",
     "warning": "",
