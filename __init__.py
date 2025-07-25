@@ -1,4 +1,4 @@
-import bpy
+from bpy.utils import register_class, unregister_class
 
 from .core import cleanup_on_reload
 from .keymaps import register_keymaps, unregister_keymaps
@@ -32,7 +32,7 @@ cleanup_menu_on_reload()
 
 def register():
     for cls in classes:
-        bpy.utils.register_class(cls)
+        register_class(cls)
     register_menu()
     register_keymaps()
 
@@ -45,4 +45,4 @@ def unregister():
     unregister_keymaps()
     unregister_menu()
     for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+        unregister_class(cls)

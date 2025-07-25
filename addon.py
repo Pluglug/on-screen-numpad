@@ -4,6 +4,7 @@ import os
 from typing import TYPE_CHECKING
 
 import bpy
+from bpy.types import Context
 
 if TYPE_CHECKING:
     from .preferences import OnScreenNumpadPreferences
@@ -13,7 +14,7 @@ from .utils.logging import get_logger
 ADDON_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_prefs(context: bpy.types.Context = None) -> "OnScreenNumpadPreferences":
+def get_prefs(context: Context = None) -> "OnScreenNumpadPreferences":
     """
     Get addon preferences
 
