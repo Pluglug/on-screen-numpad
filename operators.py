@@ -1,5 +1,4 @@
 # pyright: reportInvalidTypeForm=false
-import bpy
 from bpy.types import Operator
 from bpy.props import StringProperty, BoolProperty
 
@@ -117,61 +116,85 @@ class WM_OT_numeric_input(Operator):
         layout.use_property_split = False
         layout.use_property_decorate = False
 
-        # === Property Information Panel ===
+        # 1. Draw functions to list (easier to sort later)
+        section_draw_funcs = []
+
+        # Property information panel
         if calculator.current_property and prefs and prefs.show_property_path:
-            # Show property name as title, path as body
-            prop_name = calculator.current_property.prop.identifier
-            prop_path = calculator.current_property.get_display_path()
-
-            # # Calculate wrap width based on dialog width
-            # dialog_width = prefs.dialog_width if prefs else 300
-            # # Estimate character count (pixel width / 8px per character)
-            # wrap_width = max(30, dialog_width // 12)
-
-            # Add property detail information
-            additional_info = []
-            if (
-                prefs.should_respect_limits()
-                or calculator.current_property.get_current_value() is not None
-            ):
-                # Current value
-                current_value = calculator.current_property.get_current_value()
-                if current_value is not None:
-                    current_str = (
-                        prefs.format_result(current_value)
-                        if prefs
-                        else str(current_value)
-                    )
-                    additional_info.append(f"Current Value: {current_str}")
-
-                # Property limits
-                if prefs.should_respect_limits():
-                    hard_min, hard_max = (
-                        calculator.current_property.get_property_limits()
-                    )
-                    if hard_min is not None or hard_max is not None:
-                        min_str = str(hard_min) if hard_min is not None else "∞"
-                        max_str = str(hard_max) if hard_max is not None else "∞"
-                        additional_info.append(f"Range: [{min_str} ~ {max_str}]")
-
-            # Build display text
-            display_text = prop_path
-            if additional_info:
-                display_text += "\n" + "\n".join(additional_info)
-
-            # Display property information using ui_text_block
-            ui_text_block(
-                layout,
-                title=prop_name,
-                text=display_text,
-                icon="RNA",
-                collapsible=True,
-                default_closed=True,
-                panel_id="calc_property_info",
-                show_copy_button=True,
+            section_draw_funcs.append(
+                lambda: self._draw_property_info(layout, prefs, calculator)
             )
 
-        # === Input Area ===
+        # Input area & numpad (always display)
+        section_draw_funcs.append(
+            lambda: self._draw_input_area(layout, prefs, calculator)
+        )
+
+        # Function palette
+        if prefs and prefs.show_functions:
+            section_draw_funcs.append(lambda: self._draw_function_buttons(layout))
+
+        # History panel
+        if prefs and prefs.show_history and calculator.expression_history:
+            section_draw_funcs.append(
+                lambda: self._draw_history_panel(layout, calculator.expression_history)
+            )
+
+        # TODO: Future: Allow user to change order and default close by using user settings.
+        for draw_func in section_draw_funcs:
+            draw_func()
+
+    def _draw_property_info(self, layout, prefs, calculator):
+        """property info panel"""
+
+        # Show property name as title, path as body
+        prop_name = calculator.current_property.prop.identifier
+        prop_path = calculator.current_property.get_display_path()
+
+        # Additional detail information
+        additional_info = []
+        if (
+            prefs.should_respect_limits()
+            or calculator.current_property.get_current_value() is not None
+        ):
+            # Current value
+            current_value = calculator.current_property.get_current_value()
+            if current_value is not None:
+                current_str = (
+                    prefs.format_result(current_value)
+                    if prefs
+                    else str(current_value)
+                )
+                additional_info.append(f"Current Value: {current_str}")
+
+            # Property limits
+            if prefs.should_respect_limits():
+                hard_min, hard_max = calculator.current_property.get_property_limits()
+                if hard_min is not None or hard_max is not None:
+                    min_str = str(hard_min) if hard_min is not None else "∞"
+                    max_str = str(hard_max) if hard_max is not None else "∞"
+                    additional_info.append(f"Range: [{min_str} ~ {max_str}]")
+
+        # Build display text
+        display_text = prop_path
+        if additional_info:
+            display_text += "\n" + "\n".join(additional_info)
+
+        # Display using ui_text_block（常に collapsible）
+        ui_text_block(
+            layout,
+            title=prop_name,
+            text=display_text,
+            icon="RNA",
+            collapsible=True,
+            default_closed=True,
+            panel_id="calc_property_info",
+            show_copy_button=True,
+        )
+
+    def _draw_input_area(self, layout, prefs, calculator):
+        """input area and numpad"""
+
         input_box = layout.box()
         input_col = input_box.column()
 
@@ -197,16 +220,8 @@ class WM_OT_numeric_input(Operator):
                 icon=ic("INFO"),
             )
 
-        # === Numeric Keypad ===
+        # Numeric keypad
         self._draw_numpad(input_box)
-
-        # === Function Palette ===
-        if prefs and prefs.show_functions:
-            self._draw_function_buttons(layout)
-
-        # === History Panel ===
-        if prefs and prefs.show_history and calculator.expression_history:
-            self._draw_history_panel(layout, calculator.expression_history)
 
     def _draw_function_buttons(self, layout):
         """Draw function buttons"""
@@ -294,14 +309,6 @@ class WM_OT_numeric_input(Operator):
         prefs = get_prefs()
 
         num_box = layout.box()
-
-        # # Clear button (top row)
-        # clear_row = num_box.row(align=True)
-        # clear_row.scale_y = COMMON_SCALE_Y
-        # clear_op = clear_row.operator(
-        #     "wm.numeric_input_key", text="Clear", icon=ic("CANCEL")
-        # )
-        # clear_op.operation = "CLEAR"
 
         # Main keypad layout
         main_row = num_box.row(align=False)
