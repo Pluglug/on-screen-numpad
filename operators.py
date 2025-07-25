@@ -48,7 +48,7 @@ class WM_OT_numeric_input(Operator):
 
         # Set property information
         if not calculator.detect_property_from_context(context):
-            self.report({"ERROR"}, "Failed to get property information")
+            self.report({"ERROR"}, "Unsupported property")
             return {"CANCELLED"}
 
         # Check property type (type validation for hotkey invocation)
