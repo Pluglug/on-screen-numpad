@@ -324,7 +324,7 @@ class CalculatorState:
         if cls._popup_ref is None:
             return None
         try:
-            popup = cls._popup_ref()
+            popup = cls._popup_ref() if cls._popup_ref else None
             if popup is None:
                 cls._popup_ref = None  # Clear invalid reference
             return popup
@@ -451,8 +451,123 @@ class CalculatorState:
             log.debug(f"Failed to resolve property via context: {e}")
             return False
 
+    def _parse_blender_path(self, path: str) -> Any:
+        """Parse Blender property path
+
+        Args:
+            path: Blender property path (e.g., "bpy.data.objects['Cube']")
+
+        Returns:
+            The resolved object or None if parsing fails
+        """
+        if not path or not path.startswith("bpy."):
+            return None
+
+        try:
+            parts = path.split(".", 2)  # ['bpy', 'data'/'context', ...]
+            if len(parts) < 2:
+                return None
+
+            # Handle bpy.context paths
+            if parts[1] == "context":
+                return self._parse_context_path(parts)
+            # Handle bpy.data paths
+            elif parts[1] == "data":
+                return self._parse_data_path(parts)
+            # Other bpy attributes
+            else:
+                return self._parse_other_path(parts)
+
+        except Exception as e:
+            log.debug(f"Error parsing path '{path}': {e}")
+            return None
+
+    def _parse_context_path(self, parts: list[str]) -> Any:
+        """Parse bpy.context.* paths"""
+        if len(parts) == 2:
+            return bpy.context
+
+        obj = bpy.context
+        for attr in parts[2].split("."):
+            obj = self._resolve_attribute(obj, attr)
+            if obj is None:
+                return None
+        return obj
+
+    def _parse_data_path(self, parts: list[str]) -> Any:
+        """Parse bpy.data.* paths"""
+        if len(parts) == 2:
+            return bpy.data
+
+        remaining_path = parts[2]
+
+        # Try string indexed access first (e.g., objects['Cube'])
+        match = re.match(r"^(\w+)\[(['\"])(.+?)\2\](.*)$", remaining_path)
+        if match:
+            collection_name, _, obj_name, rest_path = match.groups()
+            collection = getattr(bpy.data, collection_name, None)
+            if collection is None:
+                return None
+            obj = collection.get(obj_name)
+        else:
+            # Try numeric indexed access (e.g., objects[0])
+            match = re.match(r"^(\w+)\[(\d+)\](.*)$", remaining_path)
+            if not match:
+                return None
+            collection_name, index_str, rest_path = match.groups()
+            collection = getattr(bpy.data, collection_name, None)
+            if collection is None:
+                return None
+            try:
+                obj = collection[int(index_str)]
+            except (IndexError, KeyError):
+                return None
+
+        if obj is None:
+            return None
+
+        # Process remaining path
+        if rest_path and rest_path.startswith("."):
+            for part in rest_path[1:].split("."):
+                obj = self._resolve_attribute(obj, part)
+                if obj is None:
+                    return None
+        return obj
+
+    def _parse_other_path(self, parts: list[str]) -> Any:
+        """Parse other bpy.* paths"""
+        obj = getattr(bpy, parts[1], None)
+        if obj is None or len(parts) == 2:
+            return obj
+
+        for attr in parts[2].split("."):
+            obj = getattr(obj, attr, None)
+            if obj is None:
+                return None
+        return obj
+
+    def _resolve_attribute(self, obj: Any, attr: str) -> Any:
+        """Resolve a single attribute with optional index"""
+        if "[" not in attr or not attr.endswith("]"):
+            return getattr(obj, attr, None)
+
+        # Handle indexed access
+        attr_name = attr[: attr.index("[")]
+        index_str = attr[attr.index("[") + 1 : -1].strip("'\"")
+
+        obj = getattr(obj, attr_name, None)
+        if obj is None:
+            return None
+
+        try:
+            # Try numeric index
+            return obj[int(index_str)]
+        except ValueError:
+            # String index
+            return obj.get(index_str) if hasattr(obj, "get") else obj[index_str]
+
     def _try_copy_data_path_button(self, context) -> bool:
-        """Get property path using copy_data_path_button and resolve with eval"""
+        """Get property path using copy_data_path_button"""
         try:
             # Call copy_data_path_button to copy path to clipboard
             result = bpy.ops.ui.copy_data_path_button(
@@ -471,15 +586,15 @@ class CalculatorState:
 
             log.debug(f"Got clipboard path: {clipboard_text}")
 
-            # Resolve path directly with eval
-            return self._resolve_path_by_eval(clipboard_text)
+            # Resolve path
+            return self._resolve_path(clipboard_text)
 
         except Exception as e:
             log.debug(f"Failed to resolve property via copy_data_path_button: {e}")
             return False
 
-    def _resolve_path_by_eval(self, full_path: str) -> bool:
-        """Resolve full path with eval to get property information"""
+    def _resolve_path(self, full_path: str) -> bool:
+        """Resolve full path to get property information"""
         try:
             # Path example: "bpy.data.objects['Cube'].location[0]"
             # Extract array index
@@ -496,13 +611,12 @@ class CalculatorState:
                     # Ignore string indices
                     pass
 
-            # Get property owner
-            try:
-                prop_owner = eval(base_path.rsplit(".", 1)[0])
-                prop_name = base_path.split(".")[-1]
-            except:
-                log.debug(f"Failed to eval property owner from: {base_path}")
+            # Parse property path
+            prop_owner = self._parse_blender_path(base_path.rsplit(".", 1)[0])
+            if prop_owner is None:
+                log.debug(f"Failed to parse property owner from: {base_path}")
                 return False
+            prop_name = base_path.split(".")[-1]
 
             # Get property definition
             if not hasattr(prop_owner, "bl_rna") or not hasattr(
@@ -534,12 +648,12 @@ class CalculatorState:
             )
 
             log.debug(
-                f"Successfully resolved property via eval: {self.current_property.get_display_path()}"
+                f"Successfully resolved property: {self.current_property.get_display_path()}"
             )
             return True
 
         except Exception as e:
-            log.debug(f"Failed to resolve property via eval: {e}")
+            log.debug(f"Failed to resolve property: {e}")
             return False
 
     def write_value_to_property(self, value: Union[int, float]) -> bool:
