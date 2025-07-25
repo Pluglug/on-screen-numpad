@@ -5,7 +5,7 @@ from .keymaps import register_keymaps, unregister_keymaps
 from .menu_integration import cleanup_menu_on_reload, register_menu, unregister_menu
 from .operators import WM_OT_numeric_input, WM_OT_numeric_input_key
 from .preferences import OnScreenNumpadPreferences
-from .utils.ui_utils import CopyTextToClipboardOperator
+from .utils.ui_utils import OSN_OT_copy_text_to_clipboard
 
 bl_info = {
     "name": "On-Screen Numpad",
@@ -23,7 +23,7 @@ classes = [
     OnScreenNumpadPreferences,
     WM_OT_numeric_input,
     WM_OT_numeric_input_key,
-    CopyTextToClipboardOperator,
+    OSN_OT_copy_text_to_clipboard,
 ]
 
 cleanup_on_reload()

@@ -2,11 +2,10 @@ import textwrap
 
 import bpy
 from bpy.app import version as BL_VERSION
+from bpy.props import StringProperty
 from bpy.types import Operator, UILayout
 
-from ..addon import ADDON_PREFIX, ADDON_PREFIX_PY
 from ..utils.logging import get_logger
-
 
 log = get_logger(__name__)
 
@@ -37,14 +36,18 @@ def _indented_layout(layout, level):
 
 
 class CopyTextToClipboard:
-    """テキストをクリップボードにコピーするオペレーター"""
+    """テキストをクリップボードにコピーするオペレーター
 
-    bl_idname = f"{ADDON_PREFIX_PY}.copy_text_to_clipboard"
+    継承して使用する場合は、bl_idnameを各アドオンで固有の値に設定してください。
+    例: bl_idname = "my_addon.copy_text_to_clipboard"
+    """
+
+    bl_idname = "wm.copy_text_to_clipboard"
     bl_label = "Copy to Clipboard"
     bl_description = "Copy text to clipboard"
     bl_options = {"REGISTER"}
 
-    text: bpy.props.StringProperty(
+    text: StringProperty(
         name="Text", description="Text to copy to clipboard", default=""
     )
 
@@ -59,11 +62,8 @@ class CopyTextToClipboard:
         return {"FINISHED"}
 
 
-CopyTextToClipboardOperator = type(
-    f"{ADDON_PREFIX}_OT_copy_text_to_clipboard",
-    (CopyTextToClipboard, Operator),
-    {},
-)
+class OSN_OT_copy_text_to_clipboard(CopyTextToClipboard, Operator):
+    bl_idname = "osn.copy_text_to_clipboard"
 
 
 def ic(icon):
@@ -212,7 +212,7 @@ def ui_multiline_text(
         copy_row.scale_x = 0.8
 
         copy_op = copy_row.operator(
-            CopyTextToClipboardOperator.bl_idname, text="", icon="COPYDOWN"
+            OSN_OT_copy_text_to_clipboard.bl_idname, text="", icon="COPYDOWN"
         )
         copy_op.text = text
 
