@@ -10,7 +10,7 @@ from .utils.ui_utils import OSN_OT_copy_text_to_clipboard
 bl_info = {
     "name": "On-Screen Numpad",
     "author": "Pluglug",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (4, 2, 0),
     "location": "Numeric Property Fields",
     "description": "No need to leave the mouse to enter numbers!",
@@ -18,6 +18,12 @@ bl_info = {
     "wiki_url": "",
     "category": "User Interface",
 }
+
+# Version update checklist (when bumping version)
+# - [ ] Update bl_info["version"]
+# - [ ] Update version in blender_manifest.toml
+# - [ ] Update blender_version_max if needed
+# - [ ] Update Version badge in README.md
 
 classes = [
     OnScreenNumpadPreferences,

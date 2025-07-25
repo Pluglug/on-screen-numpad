@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "on_screen_numpad"
-version = "1.1.0"
+version = "1.2.0"
 name = "On-Screen Numpad"
 tagline = "No need to leave the mouse to enter numbers"
 maintainer = "Pluglug"
