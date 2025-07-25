@@ -24,22 +24,15 @@ class WM_OT_numeric_input(Operator):
     @classmethod
     def poll(cls, context):
         """Check if operator can be executed"""
-        # Allow if calculator is already open
         calculator = CalculatorState.get_instance()
-        if calculator.current_property:
+
+        if calculator.get_popup():
             return True
 
-        # Check normal property context
-        ptr = getattr(context, "button_pointer", None)
-        prop = getattr(context, "button_prop", None)
-        if ptr and prop and prop.type in {"INT", "FLOAT"}:
+        if calculator.is_numeric_property_available(context):
             return True
 
-        # For hotkey invocation: use copy_data_path_button poll
-        try:
-            return bpy.ops.ui.copy_data_path_button.poll()
-        except Exception:
-            return False
+        return False
 
     def invoke(self, context, event):
         """Display calculator dialog"""

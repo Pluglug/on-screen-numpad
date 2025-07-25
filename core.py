@@ -324,7 +324,11 @@ class CalculatorState:
         if cls._popup_ref is None:
             return None
         try:
-            popup = cls._popup_ref() if cls._popup_ref else None
+            popup_ref = cls._popup_ref
+            if popup_ref is not None:
+                popup = popup_ref()  # type: ignore[operator]
+            else:
+                popup = None
             if popup is None:
                 cls._popup_ref = None  # Clear invalid reference
             return popup
@@ -336,6 +340,8 @@ class CalculatorState:
     def clear_popup(cls):
         """Clear popup reference"""
         cls.set_popup(None)
+        if cls._instance is not None:
+            cls._instance.current_property = None
 
     @classmethod
     def cleanup_on_reload(cls):
@@ -344,6 +350,46 @@ class CalculatorState:
             cls.clear_popup()
             cls._instance = None
         log.debug("Calculator state cleaned up for reload")
+
+    def is_numeric_property_available(self, context) -> bool:
+        """Return True if *context* is currently pointing at an INT/FLOAT property."""
+
+        # 1) button_pointer / button_prop
+        ptr = getattr(context, "button_pointer", None)
+        prop = getattr(context, "button_prop", None)
+        if ptr and prop and getattr(prop, "type", None) in {"INT", "FLOAT"}:
+            return True
+
+        # 2) context.property (forPreferences)
+        try:
+            prop_info = context.property  # (data_block, data_path, index)
+            if prop_info:
+                data_block, data_path, _ = prop_info
+                if data_block and data_path:
+                    prop_name = data_path.split(".")[-1]
+                    if "[" in prop_name:
+                        prop_name = prop_name.split("[")[0]
+
+                    prop_owner = data_block
+                    if "." in data_path:
+                        try:
+                            prop_owner = data_block.path_resolve(
+                                data_path.rsplit(".", 1)[0]
+                            )
+                        except Exception:
+                            prop_owner = None
+
+                    if prop_owner and hasattr(prop_owner, "bl_rna"):
+                        prop_def = prop_owner.bl_rna.properties.get(prop_name)
+                        if prop_def and prop_def.type in {"INT", "FLOAT"}:
+                            return True
+        except Exception:
+            pass
+
+        try:
+            return bpy.ops.ui.copy_data_path_button.poll()
+        except Exception:
+            return False
 
     def evaluate_expression(self, expression: str) -> Union[int, float]:
         """Evaluate expression and add to history"""
