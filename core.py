@@ -4,6 +4,7 @@ import operator as op
 import re
 import weakref
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Any, Optional, Union
 
 import bpy
@@ -58,6 +59,7 @@ class PropertyInfo:
     prop_index: int = -1  # Vector element index
     sub_path: str = ""  # Relative path from ID
     id_owner: Any = None  # ID object for final writing
+    is_id_property: bool = False  # Accessed via ["name"] (ID prop)
 
     def get_display_path(self) -> str:
         """Generate path for UI display"""
@@ -87,10 +89,16 @@ class PropertyInfo:
                 base_path = str(self.id_owner)
 
             # Build full path
-            if self.sub_path:
-                full_path = f"{base_path}{self.sub_path}.{self.prop.identifier}"
+            if self.is_id_property:
+                if self.sub_path:
+                    full_path = f'{base_path}{self.sub_path}["{self.prop.identifier}"]'
+                else:
+                    full_path = f'{base_path}["{self.prop.identifier}"]'
             else:
-                full_path = f"{base_path}.{self.prop.identifier}"
+                if self.sub_path:
+                    full_path = f"{base_path}{self.sub_path}.{self.prop.identifier}"
+                else:
+                    full_path = f"{base_path}.{self.prop.identifier}"
 
             # Add array index if applicable
             if self.prop_index != -1:
@@ -112,7 +120,18 @@ class PropertyInfo:
                 # Nested path or direct access
                 container = self.ptr
 
-            prop_value = getattr(container, self.prop.identifier)
+            # Access property value
+            if self.is_id_property:
+                try:
+                    prop_value = container[self.prop.identifier]
+                except Exception:
+                    prop_value = (
+                        container.get(self.prop.identifier)
+                        if hasattr(container, "get")
+                        else None
+                    )
+            else:
+                prop_value = getattr(container, self.prop.identifier)
 
             if self.prop_index != -1:
                 # Individual component of vector property
@@ -443,7 +462,51 @@ class CalculatorState:
 
             log.debug(f"Context property: {data_block}, {data_path}, {prop_index}")
 
-            # Get final property name from data path
+            # Handle ID property at the end: ...["name"]
+            m_id = re.match(r"^(.*)\[(\'|\")(.*)\2\]$", data_path)
+            if m_id and not m_id.group(3).isdigit():
+                owner_path = m_id.group(1)
+                key_str = m_id.group(3)
+                try:
+                    prop_owner = data_block.path_resolve(owner_path)
+                except Exception:
+                    prop_owner = None
+                if prop_owner is not None:
+                    try:
+                        try:
+                            current_value = prop_owner[key_str]
+                        except Exception:
+                            current_value = (
+                                prop_owner.get(key_str)
+                                if hasattr(prop_owner, "get")
+                                else None
+                            )
+                    except Exception:
+                        current_value = None
+
+                    if isinstance(current_value, (int, float)):
+                        prop_stub = SimpleNamespace(
+                            identifier=key_str,
+                            type=(
+                                "FLOAT" if isinstance(current_value, float) else "INT"
+                            ),
+                            subtype="",
+                        )
+                        id_owner = getattr(prop_owner, "id_data", data_block)
+                        self.current_property = PropertyInfo(
+                            ptr=prop_owner,
+                            prop=prop_stub,
+                            prop_index=-1,
+                            sub_path="",
+                            id_owner=id_owner,
+                            is_id_property=True,
+                        )
+                        log.debug(
+                            f"Successfully resolved ID property via context: {self.current_property.get_display_path()}"
+                        )
+                        return True
+
+            # Get final property name from data path (attribute case)
             prop_name = data_path.split(".")[-1]
 
             # Remove array access (e.g., "location[0]" -> "location")
@@ -486,6 +549,7 @@ class CalculatorState:
                 prop_index=prop_index if prop_index != -1 else -1,
                 sub_path="",  # Empty for direct access
                 id_owner=data_block,
+                is_id_property=False,
             )
 
             log.debug(
@@ -593,24 +657,35 @@ class CalculatorState:
         return obj
 
     def _resolve_attribute(self, obj: Any, attr: str) -> Any:
-        """Resolve a single attribute with optional index"""
-        if "[" not in attr or not attr.endswith("]"):
+        """Resolve a single attribute with optional multiple bracket selectors"""
+        if "[" not in attr:
             return getattr(obj, attr, None)
 
-        # Handle indexed access
-        attr_name = attr[: attr.index("[")]
-        index_str = attr[attr.index("[") + 1 : -1].strip("'\"")
-
-        obj = getattr(obj, attr_name, None)
-        if obj is None:
+        base_name = attr.split("[", 1)[0]
+        current = getattr(obj, base_name, None) if base_name else obj
+        if current is None:
             return None
 
-        try:
-            # Try numeric index
-            return obj[int(index_str)]
-        except ValueError:
-            # String index
-            return obj.get(index_str) if hasattr(obj, "get") else obj[index_str]
+        # Iterate over bracket selectors like ["Name"][0]
+        for m in re.finditer(r"\[([^\]]+)\]", attr[len(base_name) :]):
+            token = m.group(1).strip("'\"")
+            if token.isdigit():
+                try:
+                    current = current[int(token)]
+                except Exception:
+                    return None
+            else:
+                try:
+                    if hasattr(current, "get"):
+                        current = current.get(token)
+                    else:
+                        current = current[token]
+                except Exception:
+                    return None
+            if current is None:
+                return None
+
+        return current
 
     def _try_copy_data_path_button(self, context) -> bool:
         """Get property path using copy_data_path_button"""
@@ -647,15 +722,57 @@ class CalculatorState:
             prop_index = -1
             base_path = full_path
 
-            if "[" in full_path and full_path.endswith("]"):
-                bracket_pos = full_path.rfind("[")
-                base_path = full_path[:bracket_pos]
-                index_str = full_path[bracket_pos + 1 : -1]
+            # ID property at end: ["name"]
+            m_id = re.match(r"^(.*)\[(\'|\")(.*)\2\]$", base_path)
+            if m_id and not m_id.group(3).isdigit():
+                owner_path = m_id.group(1)
+                key_str = m_id.group(3)
+                prop_owner = self._parse_blender_path(owner_path)
+                if prop_owner is None:
+                    log.debug(f"Failed to parse ID prop owner from: {owner_path}")
+                    return False
+
+                # Probe type
                 try:
-                    prop_index = int(index_str)
-                except ValueError:
-                    # Ignore string indices
-                    pass
+                    try:
+                        current_value = prop_owner[key_str]
+                    except Exception:
+                        current_value = (
+                            prop_owner.get(key_str)
+                            if hasattr(prop_owner, "get")
+                            else None
+                        )
+                except Exception:
+                    current_value = None
+
+                if isinstance(current_value, (int, float)):
+                    prop_stub = SimpleNamespace(
+                        identifier=key_str,
+                        type=("FLOAT" if isinstance(current_value, float) else "INT"),
+                        subtype="",
+                    )
+                    id_owner = getattr(prop_owner, "id_data", prop_owner)
+                    self.current_property = PropertyInfo(
+                        ptr=prop_owner,
+                        prop=prop_stub,
+                        prop_index=-1,
+                        sub_path="",
+                        id_owner=id_owner,
+                        is_id_property=True,
+                    )
+                    log.debug(
+                        f"Successfully resolved property: {self.current_property.get_display_path()}"
+                    )
+                    return True
+                else:
+                    log.debug("ID property is not numeric or does not exist")
+                    return False
+
+            # Numeric index at end: [0]
+            m_idx = re.match(r"^(.*)\[(\d+)\]$", base_path)
+            if m_idx:
+                base_path = m_idx.group(1)
+                prop_index = int(m_idx.group(2))
 
             # Parse property path
             prop_owner = self._parse_blender_path(base_path.rsplit(".", 1)[0])
@@ -691,6 +808,7 @@ class CalculatorState:
                 prop_index=prop_index,
                 sub_path="",  # Empty for direct access
                 id_owner=id_owner,
+                is_id_property=False,
             )
 
             log.debug(
@@ -746,7 +864,15 @@ class CalculatorState:
 
             # Write value
             prop_name = self.current_property.prop.identifier
-            if self.current_property.prop_index != -1:
+            if self.current_property.is_id_property:
+                try:
+                    container[prop_name] = value
+                except Exception:
+                    if hasattr(container, "__setitem__"):
+                        container[prop_name] = value
+                    else:
+                        setattr(container, prop_name, value)
+            elif self.current_property.prop_index != -1:
                 # Vector property
                 vec = list(getattr(container, prop_name))
                 vec[self.current_property.prop_index] = value
