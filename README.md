@@ -3,7 +3,7 @@
 **No need to leave the mouse to enter numbers!**
 
 ![Blender](https://img.shields.io/badge/Blender-4.2%2B-orange)
-![Version](https://img.shields.io/badge/Version-1.1.0-blue)
+![Version](https://img.shields.io/badge/Version-1.2.1-blue)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-green)
 
 An on-screen numpad addon for Blender's numeric property input. Simply press a hotkey while your mouse cursor is over a property field to display a calculator-enabled numeric input dialog.
@@ -77,4 +77,3 @@ This project is licensed under the GNU General Public License v3.0 or later.
 
 For bug reports and feature requests: [Issues](https://github.com/Pluglug/on-screen-numpad/issues)  
 For code improvements: [Pull Requests](https://github.com/Pluglug/on-screen-numpad/pulls)
-

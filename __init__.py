@@ -7,23 +7,17 @@ from .operators import WM_OT_numeric_input, WM_OT_numeric_input_key
 from .preferences import OnScreenNumpadPreferences
 from .utils.ui_utils import OSN_OT_copy_text_to_clipboard
 
-bl_info = {
-    "name": "On-Screen Numpad",
-    "author": "Pluglug",
-    "version": (1, 2, 1),
-    "blender": (4, 2, 0),
-    "location": "Numeric Property Fields",
-    "description": "No need to leave the mouse to enter numbers!",
-    "warning": "",
-    "wiki_url": "",
-    "category": "User Interface",
-}
-
-# Version update checklist (when bumping version)
-# - [ ] Update bl_info["version"]
-# - [ ] Update version in blender_manifest.toml
-# - [ ] Update blender_version_max if needed
-# - [ ] Update Version badge in README.md
+# bl_info = {
+#     "name": "On-Screen Numpad",
+#     "author": "Pluglug",
+#     "version": (x, x, x),
+#     "blender": (4, 2, 0),
+#     "location": "Numeric Property Fields",
+#     "description": "No need to leave the mouse to enter numbers!",
+#     "warning": "",
+#     "wiki_url": "",
+#     "category": "User Interface",
+# }
 
 classes = [
     OnScreenNumpadPreferences,
