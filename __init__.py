@@ -10,7 +10,7 @@ from .utils.ui_utils import OSN_OT_copy_text_to_clipboard
 bl_info = {
     "name": "On-Screen Numpad",
     "author": "Pluglug",
-    "version": (1, 2, 0),
+    "version": (1, 2, 1),
     "blender": (4, 2, 0),
     "location": "Numeric Property Fields",
     "description": "No need to leave the mouse to enter numbers!",
