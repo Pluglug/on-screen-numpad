@@ -1,0 +1,54 @@
+name: Draft Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  create-draft-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag commit is contained in main
+        id: verify_main
+        shell: bash
+        run: |
+          git fetch origin main:refs/remotes/origin/main --depth=1
+
+          if git merge-base --is-ancestor "$GITHUB_SHA" "origin/main"; then
+            echo "on_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${GITHUB_REF_NAME} is not on origin/main. Skipping draft release."
+          fi
+
+      - name: Build release zip
+        if: steps.verify_main.outputs.on_main == 'true'
+        id: build_zip
+        shell: bash
+        run: |
+          mkdir -p dist
+          archive_path="dist/on_screen_numpad-${GITHUB_REF_NAME}.zip"
+          git archive --worktree-attributes --format=zip --output "$archive_path" HEAD
+          echo "asset_path=$archive_path" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft release
+        if: steps.verify_main.outputs.on_main == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Pluglug)
+          draft: true
+          generate_release_notes: true
+          files: ${{ steps.build_zip.outputs.asset_path }}

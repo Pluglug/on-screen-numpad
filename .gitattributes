@@ -1,0 +1,7 @@
+.gitattributes export-ignore
+.github export-ignore
+.gitignore export-ignore
+.vscode export-ignore
+.venv export-ignore
+__pycache__ export-ignore
+_dev-notes export-ignore
